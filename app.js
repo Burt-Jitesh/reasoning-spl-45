@@ -1,134 +1,329 @@
 // ============================================================
-// REASONING SPL-45 — Refactored App
+// ONAFBU - MODERN PAPER EDITION (Mobile First)
 // ============================================================
 
-// ===== TOPIC DEFINITIONS (For tagging, not sorting) =====
-const TOPIC_KEYWORDS = [
-  { id: 'introduction', name: 'Introduction', keywords: ['introduction', 'intro'] },
-  { id: 'dice', name: 'Dice (पासा)', keywords: ['dice', 'पासा'] },
-  { id: 'cube-cuboid', name: 'Cube & Cuboid', keywords: ['cube', 'cuboid'] },
-  { id: 'venn-diagram', name: 'Venn Diagram', keywords: ['venn diagram', 'venn'] },
-  { id: 'directions', name: 'Directions & Distance', keywords: ['direction', 'distance'] },
-  { id: 'counting-figures', name: 'Counting Figures', keywords: ['counting figure', 'counting fig'] },
-  { id: 'blood-relations', name: 'Blood Relations', keywords: ['blood relation', 'blood'] },
-  { id: 'alphabetical-series', name: 'Alphabetical Series', keywords: ['alphabetical series', 'alphabet'] },
-  { id: 'non-verbal', name: 'Non Verbal Reasoning', keywords: ['non verbal', 'non-verbal', 'nonverbal', 'mirror', 'water image', 'paper folding', 'figure completion'] },
-  { id: 'coding-decoding', name: 'Coding & Decoding', keywords: ['coding', 'decoding'] },
-  { id: 'letter-series', name: 'Letter Series', keywords: ['letter series'] },
-  { id: 'pair-formation', name: 'Pair Formation', keywords: ['pair formation', 'pair', 'dictionary', 'word formation', 'jumbling'] },
-  { id: 'calendar', name: 'Calendar', keywords: ['calendar'] },
-  { id: 'statement-assumptions', name: 'Statement & Assumptions', keywords: ['statement', 'assumption', 'conclusion', 'inference', 'argument', 'assertion', 'reason', 'decision making'] },
-  { id: 'cause-effect', name: 'Cause & Effect', keywords: ['cause', 'effect'] },
-  { id: 'analogy', name: 'Analogy', keywords: ['analogy'] },
-  { id: 'syllogism', name: 'Syllogism', keywords: ['syllogism', 'syllogims'] },
-  { id: 'puzzle', name: 'Puzzle', keywords: ['puzzle'] },
-  { id: 'data-sufficiency', name: 'Data Sufficiency', keywords: ['data sufficiency'] },
-  { id: 'course-of-action', name: 'Course of Action', keywords: ['course of action'] }
-];
-
-// ===== STATE =====
-let processedVideos = [];
-let processedPdfs = [];
-let watchedVideos = new Set();
-let studyHistory = {}; // Format: { "YYYY-MM-DD": [videoId1, videoId2] }
-let currentVideoIndex = -1;
+let watchedVideos = {}; // { courseId: Set(videoIds) }
+let currentCourseId = null;
+let currentPlayingId = null;
 let hlsInstance = null;
+let studyChartInstance = null;
+let currentViewMode = 'list';
 
-// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-  loadTheme();
-  loadProgress();
-  processData();
-  renderTimeline();
-  renderPdfs();
-  renderAnalytics();
-  initSearch();
-  initControls();
-  resumeLastVideo();
-});
-
-function resumeLastVideo() {
-  const lastVideoId = localStorage.getItem('spl45_last_video');
-  if (lastVideoId !== null && processedVideos[lastVideoId]) {
-    playVideo(parseInt(lastVideoId));
-  }
-}
-
-// ===== THEME =====
-function loadTheme() {
-  const savedTheme = localStorage.getItem('spl45_theme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeBtn(savedTheme);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('spl45_theme', next);
-  updateThemeBtn(next);
-}
-
-function updateThemeBtn(theme) {
-  const btn = document.getElementById('themeToggleBtn');
-  if (theme === 'dark') {
-    btn.innerHTML = '<i class="ri-sun-line"></i> Light Mode';
-  } else {
-    btn.innerHTML = '<i class="ri-moon-line"></i> Dark Mode';
-  }
-}
-
-// ===== DATA PROCESSING =====
-function processData() {
-  if (typeof globalCourseData === 'undefined') {
-    alert("Data not found. Make sure data.js is loaded.");
+  if (typeof globalPlatformData === 'undefined') {
+    alert("Data file missing!");
     return;
   }
+  
+  updateGreeting();
+  loadAllProgress();
+  renderDashboard();
+});
 
-  // Process videos sequentially
-  let currentTopicId = null;
-
-  processedVideos = globalCourseData.videos.map((v, index) => {
-    const cleanedTitle = cleanTitle(v.title);
-    const topic = detectTopic(cleanedTitle);
-    
-    // Determine video type
-    let videoType = 'hls';
-    if (v.url && (v.url.includes('youtube.com') || v.url.includes('youtu.be'))) {
-      videoType = 'youtube';
-    }
-
-    return {
-      id: index,
-      index: index,
-      title: cleanedTitle,
-      url: v.url,
-      type: videoType,
-      topic: topic
-    };
-  });
-
-  // Process PDFs
-  processedPdfs = globalCourseData.pdfs.map((p, index) => {
-    const cleanedTitle = cleanTitle(p.title);
-    return {
-      id: index,
-      title: cleanedTitle,
-      url: p.url,
-      category: detectPdfCategory(cleanedTitle)
-    };
-  });
-
-  // Update Top Stats
-  document.getElementById('totalVids').textContent = processedVideos.length;
-  document.getElementById('totalPdfs').textContent = processedPdfs.length;
-  updateProgressPct();
+function updateGreeting() {
+  const hour = new Date().getHours();
+  let greeting = "Good Evening.";
+  if (hour < 12) greeting = "Good Morning.";
+  else if (hour < 17) greeting = "Good Afternoon.";
+  
+  const el = document.getElementById('greetingTitle');
+  if (el) el.textContent = greeting;
 }
 
+// ===== STATE & PROGRESS =====
+function loadAllProgress() {
+  Object.keys(globalPlatformData).forEach(courseId => {
+    const saved = localStorage.getItem(`onafbu_watched_${courseId}`);
+    if (saved) watchedVideos[courseId] = new Set(JSON.parse(saved));
+    else watchedVideos[courseId] = new Set();
+  });
+  updateGlobalTracker();
+}
+
+function updateGlobalTracker() {
+  let totalClasses = 0;
+  let totalWatched = 0;
+  
+  Object.keys(globalPlatformData).forEach(courseId => {
+    const course = globalPlatformData[courseId];
+    totalClasses += course.videos.length;
+    if (watchedVideos[courseId]) {
+      totalWatched += watchedVideos[courseId].size;
+    }
+  });
+  
+  const hrsStudied = (totalWatched * 1.25).toFixed(1);
+  const hrsLeft = ((totalClasses - totalWatched) * 1.25).toFixed(1);
+  
+  const container = document.getElementById('globalCapsules');
+  if (container) {
+    container.innerHTML = `
+      <span class="capsule studied">🕒 ${hrsStudied} hrs studied</span>
+      <span class="capsule pace">🎯 ${totalWatched}/${totalClasses} watched</span>
+      <span class="capsule remaining">⏳ ${hrsLeft} hrs left</span>
+    `;
+  }
+}
+
+function saveProgress(courseId) {
+  if (watchedVideos[courseId]) {
+    localStorage.setItem(`onafbu_watched_${courseId}`, JSON.stringify([...watchedVideos[courseId]]));
+    updateGlobalTracker();
+  }
+}
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const grid = document.getElementById('courseGrid');
+  let html = '';
+  
+  Object.keys(globalPlatformData).forEach(courseId => {
+    const course = globalPlatformData[courseId];
+    
+    const totalClasses = course.videos.length;
+    const totalWatched = watchedVideos[courseId] ? watchedVideos[courseId].size : 0;
+    const hrsStudied = (totalWatched * 1.25).toFixed(1);
+    const hrsLeft = ((totalClasses - totalWatched) * 1.25).toFixed(1);
+    
+    html += `
+      <div class="course-card paper-panel" onclick="openCourse('${courseId}')">
+        <div class="course-icon-wrapper" style="color: ${course.color};">
+          <i class="${course.icon}"></i>
+        </div>
+        <div class="course-info" style="flex:1;">
+          <h3>${course.title}</h3>
+          <p>${course.teacher}</p>
+          <div class="capsule-container">
+            <span class="capsule studied">${hrsStudied} hrs studied</span>
+            <span class="capsule remaining">${hrsLeft} hrs left</span>
+            <span class="capsule pace">${totalWatched}/${totalClasses} done</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  grid.innerHTML = html;
+}
+
+// ===== COURSE VIEW (TIMELINE) =====
+window.openCourse = function(courseId) {
+  currentCourseId = courseId;
+  const course = globalPlatformData[courseId];
+  
+  document.getElementById('dashboardView').classList.add('hidden');
+  document.getElementById('courseView').classList.remove('hidden');
+  
+  document.getElementById('courseTitle').textContent = course.title;
+  
+  renderTimeline();
+  updateProgressStats();
+  
+  // Setup Search
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = '';
+  searchInput.oninput = (e) => renderTimeline(e.target.value);
+}
+
+window.goHome = function() {
+  document.getElementById('courseView').classList.add('hidden');
+  document.getElementById('dashboardView').classList.remove('hidden');
+  currentCourseId = null;
+  window.scrollTo(0, 0);
+}
+
+function updateProgressStats() {
+  if (!currentCourseId) return;
+  const set = watchedVideos[currentCourseId];
+  document.getElementById('completedCount').textContent = set ? set.size : 0;
+}
+
+function renderTimeline(filterText = '') {
+  if (!currentCourseId) return;
+  const course = globalPlatformData[currentCourseId];
+  const list = document.getElementById('timelineList');
+  let html = '';
+  
+  const lowerFilter = filterText.toLowerCase();
+  
+  course.videos.forEach((v, index) => {
+    const cleanTitleStr = cleanTitle(v.title);
+    if (filterText && !cleanTitleStr.toLowerCase().includes(lowerFilter)) return;
+    
+    const isWatched = watchedVideos[currentCourseId].has(index);
+    const watchedClass = isWatched ? 'watched' : '';
+    const checkmark = isWatched ? `<i class="ri-check-line class-checkmark"></i>` : '';
+    
+    html += `
+      <div class="class-item paper-panel ${watchedClass}" onclick="openPlayer(${index})">
+        <div class="class-thumb">
+          <i class="ri-play-circle-fill"></i>
+        </div>
+        <div class="class-details">
+          <span>${cleanTitleStr}</span>
+        </div>
+        ${checkmark}
+      </div>
+    `;
+  });
+  
+  list.innerHTML = html;
+}
+
+// ===== TIMELINE VIEW TOGGLE =====
+window.setViewMode = function(mode) {
+  currentViewMode = mode;
+  document.getElementById('listViewBtn').classList.toggle('active-view', mode === 'list');
+  document.getElementById('gridViewBtn').classList.toggle('active-view', mode === 'grid');
+  
+  const list = document.getElementById('timelineList');
+  if (mode === 'grid') {
+    list.classList.add('grid-view');
+  } else {
+    list.classList.remove('grid-view');
+  }
+}
+
+// ===== PLAYER MODAL =====
+window.openPlayer = function(videoId) {
+  currentPlayingId = videoId;
+  const course = globalPlatformData[currentCourseId];
+  const video = course.videos[videoId];
+  
+  const type = (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? 'youtube' : 'hls';
+  
+  // Auto-mark as watched
+  const set = watchedVideos[currentCourseId];
+  if (!set.has(videoId)) {
+    set.add(videoId);
+    saveProgress(currentCourseId);
+  }
+  
+  document.getElementById('playerView').classList.remove('hidden');
+  document.getElementById('nowPlayingTitle').textContent = cleanTitle(video.title);
+  
+  const macTitle = document.getElementById('macTitle');
+  if (macTitle) macTitle.textContent = cleanTitle(video.title);
+  
+  updateMarkWatchedBtn();
+  loadVideoSource(video.url, type);
+}
+
+window.closePlayer = function() {
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+  const videoEl = document.getElementById('videoElement');
+  videoEl.pause();
+  videoEl.removeAttribute('src');
+  videoEl.load();
+  
+  const ytContainer = document.getElementById('youtubeContainer');
+  ytContainer.innerHTML = '';
+  ytContainer.classList.add('hidden');
+  
+  document.getElementById('playerView').classList.add('hidden');
+  renderTimeline(document.getElementById('searchInput').value); // refresh list
+  updateProgressStats();
+}
+
+function loadVideoSource(url, type) {
+  const videoEl = document.getElementById('videoElement');
+  const ytContainer = document.getElementById('youtubeContainer');
+  const qualityDiv = document.getElementById('qualitySelector');
+  
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+  videoEl.pause();
+  videoEl.removeAttribute('src');
+  ytContainer.innerHTML = '';
+  
+  if (type === 'youtube') {
+    videoEl.classList.add('hidden');
+    qualityDiv.classList.add('hidden');
+    ytContainer.classList.remove('hidden');
+    
+    const embedUrl = url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/");
+    ytContainer.innerHTML = `<iframe width="100%" height="100%" src="${embedUrl}?autoplay=1&rel=0" frameborder="0" allowfullscreen></iframe>`;
+  } else {
+    ytContainer.classList.add('hidden');
+    videoEl.classList.remove('hidden');
+    qualityDiv.classList.remove('hidden');
+    
+    if (Hls.isSupported()) {
+      hlsInstance = new Hls();
+      hlsInstance.loadSource(url);
+      hlsInstance.attachMedia(videoEl);
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+        videoEl.play();
+        const selector = document.getElementById('nativeQualitySelector');
+        selector.innerHTML = '<option value="-1">Auto</option>';
+        data.levels.forEach((level, i) => {
+          selector.innerHTML += `<option value="${i}">${level.height}p</option>`;
+        });
+      });
+    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      videoEl.src = url;
+      videoEl.addEventListener('loadedmetadata', function() {
+        videoEl.play();
+      });
+      qualityDiv.classList.add('hidden');
+    }
+  }
+}
+
+window.setQuality = function(level) {
+  if (hlsInstance) {
+    hlsInstance.currentLevel = level;
+  }
+}
+
+window.setSpeed = function(rate) {
+  const videoEl = document.getElementById('videoElement');
+  if (videoEl) videoEl.playbackRate = rate;
+}
+
+// Nav actions
+document.getElementById('prevBtn').onclick = () => {
+  if (currentPlayingId > 0) openPlayer(currentPlayingId - 1);
+};
+document.getElementById('nextBtn').onclick = () => {
+  if (!currentCourseId) return;
+  const max = globalPlatformData[currentCourseId].videos.length - 1;
+  if (currentPlayingId < max) openPlayer(currentPlayingId + 1);
+};
+
+document.getElementById('markWatchedBtn').onclick = () => {
+  const set = watchedVideos[currentCourseId];
+  if (set.has(currentPlayingId)) {
+    set.delete(currentPlayingId);
+  } else {
+    set.add(currentPlayingId);
+  }
+  saveProgress(currentCourseId);
+  updateMarkWatchedBtn();
+};
+
+function updateMarkWatchedBtn() {
+  const btn = document.getElementById('markWatchedBtn');
+  const isWatched = watchedVideos[currentCourseId].has(currentPlayingId);
+  if (isWatched) {
+    btn.classList.add('watched');
+    btn.innerHTML = `<i class="ri-check-double-line"></i> Completed`;
+  } else {
+    btn.classList.remove('watched');
+    btn.innerHTML = `<i class="ri-check-line"></i> Mark Done`;
+  }
+}
+
+// ===== UTILS =====
 function cleanTitle(title) {
   if (!title) return 'Untitled';
   let cleaned = title.replace(/[\uFFFD]+/g, '');
-  cleaned = cleaned.replace(/\s+[a-zA-Z0-9]{30,}.*$/, '');
+  cleaned = cleaned.replace(/\s+[a-zA-Z0-9_\-]{30,}.*$/, '');
   cleaned = cleaned.replace(/https?:\/\/\S+/g, '');
   cleaned = cleaned.replace(/\s+[0-9a-f]{20,}$/i, '');
   cleaned = cleaned.replace(/\s*bcov_auth=.*/i, '');
@@ -138,475 +333,142 @@ function cleanTitle(title) {
   return cleaned || 'Untitled';
 }
 
-function detectTopic(title) {
-  const lower = title.toLowerCase();
-  for (const t of TOPIC_KEYWORDS) {
-    for (const kw of t.keywords) {
-      if (lower.includes(kw)) {
-        if (t.id === 'alphabetical-series' && lower.includes('letter series')) continue;
-        return t;
-      }
-    }
-  }
-  return { id: 'other', name: 'Other / Mixed' };
+// ===== COURSE PDFs =====
+window.showCoursePdfs = function() {
+  if (!currentCourseId) return;
+  document.getElementById('pdfModal').classList.remove('hidden');
+  renderCurrentCoursePdfs();
+}
+window.closePdfs = function() {
+  document.getElementById('pdfModal').classList.add('hidden');
 }
 
-function detectPdfCategory(title) {
-  const lower = title.toLowerCase();
-  if (/practice\s*set|pyq|test|question/i.test(lower)) return 'Practice Sets';
-  if (/short\s*notes|notes/i.test(lower)) return 'Short Notes';
-  if (/class\s*png|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(lower)) return 'Class Boards';
-  return 'Study Material';
-}
-
-// ===== RENDERING =====
-function renderTimeline(query = '') {
-  const container = document.getElementById('timelineList');
+function renderCurrentCoursePdfs() {
+  const container = document.getElementById('pdfContainer');
   let html = '';
-  let lastTopicId = null;
-
-  const filtered = query 
-    ? processedVideos.filter(v => v.title.toLowerCase().includes(query.toLowerCase()))
-    : processedVideos;
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-light);">No classes found</div>`;
-    return;
-  }
-
-  filtered.forEach((video) => {
-    // Insert Topic Header if it changes (and we're not searching, or just let it show during search too)
-    if (video.topic.id !== lastTopicId) {
-      html += `<div class="topic-header">${video.topic.name}</div>`;
-      lastTopicId = video.topic.id;
-    }
-
-    const isWatched = watchedVideos.has(video.id);
-    const isActive = currentVideoIndex === video.id;
-    
+  
+  const course = globalPlatformData[currentCourseId];
+  if (course && course.pdfs && course.pdfs.length > 0) {
     html += `
-      <div class="class-item ${isWatched ? 'watched' : ''} ${isActive ? 'active' : ''}" 
-           onclick="playVideo(${video.id})"
-           id="class-item-${video.id}">
-        <div class="class-status">
-          ${isWatched ? '<i class="ri-checkbox-circle-fill"></i>' : '<i class="ri-checkbox-blank-circle-line"></i>'}
-        </div>
-        <div class="class-info">
-          <div class="class-number">Class ${video.index + 1}</div>
-          <div class="class-title">${escapeHtml(video.title)}</div>
-        </div>
-      </div>
+      <div class="pdf-category">
+        <div class="pdf-list">
     `;
-  });
-
+    
+    course.pdfs.forEach(pdf => {
+      html += `
+        <a href="${pdf.url}" target="_blank" class="pdf-card">
+          <i class="ri-file-pdf-line"></i>
+          <span class="pdf-title">${cleanTitle(pdf.title)}</span>
+        </a>
+      `;
+    });
+    
+    html += `</div></div>`;
+  } else {
+    html = `<p style="text-align:center; margin-top: 40px; color: var(--text-muted);">No study materials available for this course.</p>`;
+  }
+  
   container.innerHTML = html;
 }
 
-function renderPdfs(filter = 'all') {
-  const categories = ['all', ...new Set(processedPdfs.map(p => p.category))];
-  const filterContainer = document.getElementById('pdfFilters');
-  
-  filterContainer.innerHTML = categories.map(cat => {
-    const count = cat === 'all' ? processedPdfs.length : processedPdfs.filter(p => p.category === cat).length;
-    return `<button class="pdf-filter-btn ${filter === cat ? 'active' : ''}" onclick="filterPdfs('${cat}')">${cat} (${count})</button>`;
-  }).join('');
-
-  const grid = document.getElementById('pdfGrid');
-  const filtered = filter === 'all' ? processedPdfs : processedPdfs.filter(p => p.category === filter);
-  
-  grid.innerHTML = filtered.map(pdf => `
-    <a href="${pdf.url}" target="_blank" class="pdf-card">
-      <div class="pdf-icon"><i class="ri-file-pdf-line"></i></div>
-      <div class="pdf-info">
-        <div class="pdf-title">${escapeHtml(pdf.title)}</div>
-        <div class="pdf-category">${pdf.category}</div>
-      </div>
-      <div class="pdf-download"><i class="ri-download-2-line"></i></div>
-    </a>
-  `).join('');
+// ===== DETAILED TRACKER MODAL =====
+window.openTrackerModal = function() {
+  document.getElementById('trackerModal').classList.remove('hidden');
+  renderStudyChart();
+  generateAiSuggestions();
 }
 
-window.filterPdfs = function(cat) {
-  renderPdfs(cat);
-};
-
-// ===== VIDEO PLAYER & HLS =====
-window.playVideo = function(id) {
-  const video = processedVideos[id];
-  if (!video) return;
-
-  currentVideoIndex = id;
-  localStorage.setItem('spl45_last_video', id); // Save last watched
-  
-  // Update UI state
-  document.getElementById('emptyPlayer').classList.add('hidden');
-  document.getElementById('videoHost').classList.remove('hidden');
-  document.getElementById('videoMeta').classList.remove('hidden');
-  
-  document.getElementById('nowPlayingTitle').textContent = `Class ${video.index + 1}: ${video.title}`;
-  document.getElementById('currentTopicBadge').textContent = video.topic.name;
-  
-  // Highlight active in timeline
-  renderTimeline(document.getElementById('searchInput').value);
-  
-  // Auto-scroll timeline to active item
-  const el = document.getElementById(`class-item-${id}`);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-  // Navigation buttons
-  document.getElementById('prevBtn').disabled = currentVideoIndex <= 0;
-  document.getElementById('nextBtn').disabled = currentVideoIndex >= processedVideos.length - 1;
-
-  // Auto Watch Feature
-  markAsWatched(id);
-
-  // Setup Player
-  setupPlayer(video);
-};
-
-function setupPlayer(video) {
-  document.getElementById('emptyPlayer').classList.add('hidden');
-  document.getElementById('videoHost').classList.remove('hidden');
-  document.getElementById('videoMeta').classList.remove('hidden');
-
-  const videoEl = document.getElementById('videoElement');
-  const qualitySelector = document.getElementById('qualitySelector');
-  const ytContainer = document.getElementById('youtubeContainer');
-  
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
-
-  if (video.type === 'youtube') {
-    videoEl.classList.add('hidden');
-    qualitySelector.classList.add('hidden');
-    ytContainer.classList.remove('hidden');
-    
-    // Pause existing HLS video
-    videoEl.pause();
-    videoEl.removeAttribute('src');
-    videoEl.load();
-    
-    const ytMatch = video.url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&\s?"']+)/);
-    const ytId = ytMatch ? ytMatch[1] : '';
-    ytContainer.innerHTML = `
-      <div style="width:100%; height:100%; position:relative;">
-        <iframe 
-            src="https://www.youtube.com/embed/${ytId}?autoplay=1" 
-            title="YouTube video player" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-            referrerpolicy="strict-origin-when-cross-origin" 
-            allowfullscreen 
-            style="width:100%; height:100%; border:none;">
-        </iframe>
-        <a href="https://www.youtube.com/watch?v=${ytId}" target="_blank" class="action-btn" style="position:absolute; top:10px; right:10px; background: rgba(0,0,0,0.8); color: white; border: 1px solid #ff0000; text-decoration:none; z-index: 10;">
-          <i class="ri-youtube-fill" style="color:#ff0000;"></i> Open in YouTube App
-        </a>
-      </div>
-    `;
-  } else {
-    ytContainer.classList.add('hidden');
-    ytContainer.innerHTML = ''; // Destroy youtube iframe
-    videoEl.classList.remove('hidden');
-    qualitySelector.classList.remove('hidden');
-    
-    if (Hls.isSupported()) {
-      hlsInstance = new Hls({
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
-      
-      hlsInstance.loadSource(video.url);
-      hlsInstance.attachMedia(videoEl);
-      
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-        videoEl.play().catch(e => console.log('Autoplay prevented'));
-        setupQualitySelector(hlsInstance.levels);
-      });
-      
-      hlsInstance.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
-        updateQualityLabel(data.level);
-      });
-    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-      videoEl.src = video.url;
-      videoEl.play();
-      qualitySelector.classList.add('hidden'); // Safari native HLS handles quality automatically
-    }
-  }
+window.closeTrackerModal = function() {
+  document.getElementById('trackerModal').classList.add('hidden');
 }
 
-// ===== QUALITY SELECTOR =====
-function setupQualitySelector(levels) {
-  const dropdown = document.getElementById('qualityDropdown');
-  let html = `<button class="q-option selected" onclick="setQuality(-1)">Auto</button>`;
+function renderStudyChart() {
+  const ctx = document.getElementById('studyChart').getContext('2d');
   
-  // Sort levels by height (resolution)
-  const uniqueLevels = [];
-  const heights = new Set();
-  levels.forEach((level, index) => {
-    if (!heights.has(level.height)) {
-      heights.add(level.height);
-      uniqueLevels.push({ index, height: level.height });
-    }
+  if (studyChartInstance) {
+    studyChartInstance.destroy();
+  }
+  
+  const labels = [];
+  const watchedData = [];
+  const remainingData = [];
+  
+  Object.keys(globalPlatformData).forEach(courseId => {
+    const course = globalPlatformData[courseId];
+    labels.push(course.title.split(' ')[0]); // Short name
+    
+    const total = course.videos.length;
+    const watched = watchedVideos[courseId] ? watchedVideos[courseId].size : 0;
+    
+    watchedData.push((watched * 1.25).toFixed(1));
+    remainingData.push(((total - watched) * 1.25).toFixed(1));
   });
   
-  uniqueLevels.sort((a,b) => b.height - a.height).forEach(level => {
-    html += `<button class="q-option" onclick="setQuality(${level.index})">${level.height}p</button>`;
-  });
-  
-  dropdown.innerHTML = html;
-  document.getElementById('qualityToggle').textContent = 'Auto';
-}
-
-window.setQuality = function(levelIndex) {
-  if (!hlsInstance) return;
-  hlsInstance.currentLevel = levelIndex;
-  
-  // Update UI instantly
-  const options = document.querySelectorAll('.q-option');
-  options.forEach(opt => opt.classList.remove('selected'));
-  
-  if (levelIndex === -1) {
-    options[0].classList.add('selected');
-    document.getElementById('qualityToggle').textContent = 'Auto';
-  } else {
-    const selectedOpt = Array.from(options).find(opt => opt.textContent.includes(hlsInstance.levels[levelIndex].height + 'p'));
-    if (selectedOpt) selectedOpt.classList.add('selected');
-    document.getElementById('qualityToggle').textContent = hlsInstance.levels[levelIndex].height + 'p';
-  }
-  
-  document.getElementById('qualityDropdown').style.display = 'none';
-  setTimeout(() => document.getElementById('qualityDropdown').style.display = '', 200); // Reset hover
-};
-
-function updateQualityLabel(levelIndex) {
-  if (hlsInstance.autoLevelEnabled) {
-    document.getElementById('qualityToggle').textContent = `Auto (${hlsInstance.levels[levelIndex].height}p)`;
-  }
-}
-
-// ===== PROGRESS AND CONTROLS =====
-function markAsWatched(id) {
-  if (!watchedVideos.has(id)) {
-    watchedVideos.add(id);
-    
-    // Add to study history
-    const today = new Date().toISOString().split('T')[0];
-    if (!studyHistory[today]) studyHistory[today] = [];
-    if (!studyHistory[today].includes(id)) {
-      studyHistory[today].push(id);
-    }
-  }
-
-  saveProgress();
-  updateProgressPct();
-  renderAnalytics();
-  
-  const markBtn = document.getElementById('markWatchedBtn');
-  markBtn.classList.add('is-watched');
-  markBtn.innerHTML = '<i class="ri-checkbox-circle-fill"></i> Watched';
-  
-  // Render timeline efficiently without full rebuild to avoid scrolling jumps if possible
-  const item = document.getElementById(`class-item-${id}`);
-  if (item) {
-    item.classList.add('watched');
-    item.querySelector('.class-status').innerHTML = '<i class="ri-checkbox-circle-fill"></i>';
-  }
-}
-
-function toggleWatchedManually() {
-  if (currentVideoIndex < 0) return;
-  if (watchedVideos.has(currentVideoIndex)) {
-    watchedVideos.delete(currentVideoIndex);
-    document.getElementById('markWatchedBtn').classList.remove('is-watched');
-    document.getElementById('markWatchedBtn').innerHTML = '<i class="ri-check-line"></i> Mark Watched';
-  } else {
-    markAsWatched(currentVideoIndex);
-  }
-  saveProgress();
-  updateProgressPct();
-  renderTimeline(document.getElementById('searchInput').value);
-}
-
-function loadProgress() {
-  const saved = localStorage.getItem('spl45_watched_v2');
-  if (saved) watchedVideos = new Set(JSON.parse(saved));
-  
-  const history = localStorage.getItem('spl45_history');
-  if (history) studyHistory = JSON.parse(history);
-}
-
-function saveProgress() {
-  localStorage.setItem('spl45_watched_v2', JSON.stringify([...watchedVideos]));
-  localStorage.setItem('spl45_history', JSON.stringify(studyHistory));
-}
-
-function updateProgressPct() {
-  const pct = processedVideos.length > 0 ? Math.round((watchedVideos.size / processedVideos.length) * 100) : 0;
-  document.getElementById('progressPct').textContent = `${pct}%`;
-}
-
-// ===== STUDY ANALYTICS =====
-function renderAnalytics() {
-  const totalWatched = watchedVideos.size;
-  const daysStudied = Object.keys(studyHistory).length;
-  
-  document.getElementById('statTotalWatched').textContent = totalWatched;
-  document.getElementById('statTotalDays').textContent = daysStudied;
-  
-  const timeline = document.getElementById('historyTimeline');
-  
-  if (daysStudied === 0) {
-    timeline.innerHTML = '<p style="color: var(--text-muted);">No study history yet. Start watching classes!</p>';
-    return;
-  }
-  
-  // Sort dates descending (newest first)
-  const sortedDates = Object.keys(studyHistory).sort((a,b) => new Date(b) - new Date(a));
-  
-  let html = '';
-  sortedDates.forEach(dateStr => {
-    // Format date nicely
-    const dateObj = new Date(dateStr);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const niceDate = dateObj.toLocaleDateString(undefined, options);
-    
-    html += `<div class="history-day">
-      <div class="history-date"><i class="ri-calendar-check-line"></i> ${niceDate}</div>`;
-      
-    // Render classes watched on this day
-    const videoIds = studyHistory[dateStr];
-    videoIds.forEach(vidId => {
-      const video = processedVideos.find(v => v.id === vidId);
-      if (video) {
-        html += `
-          <div class="history-item">
-            <i class="ri-play-circle-fill history-item-icon"></i>
-            <div class="history-item-title">Class ${video.index + 1}: ${escapeHtml(video.title)}</div>
-            <div class="history-item-topic">${video.topic.name}</div>
-          </div>
-        `;
+  studyChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Hours Studied',
+          data: watchedData,
+          backgroundColor: '#8b5cf6',
+          borderRadius: 4
+        },
+        {
+          label: 'Hours Remaining',
+          data: remainingData,
+          backgroundColor: '#e5e7eb',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true }
+      },
+      plugins: {
+        legend: { position: 'bottom' }
       }
-    });
-    
-    html += `</div>`;
-  });
-  
-  timeline.innerHTML = html;
-}
-
-// ===== UTILS & EVENTS =====
-function initControls() {
-  document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-
-  document.getElementById('prevBtn').addEventListener('click', () => {
-    if (currentVideoIndex > 0) playVideo(currentVideoIndex - 1);
-  });
-  
-  document.getElementById('nextBtn').addEventListener('click', () => {
-    if (currentVideoIndex < processedVideos.length - 1) playVideo(currentVideoIndex + 1);
-  });
-  
-  document.getElementById('markWatchedBtn').addEventListener('click', toggleWatchedManually);
-  
-  // Sections Toggle Logic
-  const playerContainer = document.getElementById('playerContainer');
-  const pdfSection = document.getElementById('studyMaterialsSection');
-  const analyticsSection = document.getElementById('analyticsSection');
-
-  document.getElementById('togglePdfsBtn').addEventListener('click', () => {
-    playerContainer.classList.add('hidden');
-    analyticsSection.classList.add('hidden');
-    pdfSection.classList.remove('hidden');
-  });
-  
-  document.getElementById('toggleAnalyticsBtn').addEventListener('click', () => {
-    playerContainer.classList.add('hidden');
-    pdfSection.classList.add('hidden');
-    analyticsSection.classList.remove('hidden');
-  });
-  
-  // Hook up video clicking to switch back to player view
-  const originalPlayVideo = window.playVideo;
-  window.playVideo = function(id) {
-    playerContainer.classList.remove('hidden');
-    pdfSection.classList.add('hidden');
-    analyticsSection.classList.add('hidden');
-    originalPlayVideo(id);
-  };
-}
-
-window.goHome = function() {
-  const playerContainer = document.getElementById('playerContainer');
-  const pdfSection = document.getElementById('studyMaterialsSection');
-  const analyticsSection = document.getElementById('analyticsSection');
-  
-  // Reset all sections
-  playerContainer.classList.remove('hidden');
-  pdfSection.classList.add('hidden');
-  analyticsSection.classList.add('hidden');
-  
-  // Hide video and show empty state
-  document.getElementById('emptyPlayer').classList.remove('hidden');
-  document.getElementById('videoHost').classList.add('hidden');
-  document.getElementById('videoMeta').classList.add('hidden');
-  
-  // Stop playback if playing
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
-  const ytContainer = document.getElementById('youtubeContainer');
-  ytContainer.innerHTML = '';
-  ytContainer.classList.add('hidden');
-  
-  const videoEl = document.getElementById('videoElement');
-  videoEl.pause();
-  videoEl.removeAttribute('src');
-  videoEl.load();
-  videoEl.classList.remove('hidden');
-  document.getElementById('qualitySelector').classList.remove('hidden');
-  
-  // Reset badges
-  document.getElementById('currentTopicBadge').textContent = 'Select a class to begin';
-  currentVideoIndex = -1;
-  localStorage.removeItem('spl45_last_video'); // Clear last watched
-  
-  // Remove active highlight from timeline
-  const activeItems = document.querySelectorAll('.class-item.active');
-  activeItems.forEach(item => item.classList.remove('active'));
-};
-
-function initSearch() {
-  const input = document.getElementById('searchInput');
-  const clear = document.getElementById('clearSearch');
-  
-  input.addEventListener('input', (e) => {
-    const val = e.target.value;
-    clear.style.display = val ? 'block' : 'none';
-    renderTimeline(val);
-  });
-  
-  clear.addEventListener('click', () => {
-    input.value = '';
-    clear.style.display = 'none';
-    renderTimeline('');
-    
-    // Scroll back to active if exists
-    if (currentVideoIndex >= 0) {
-      const el = document.getElementById(`class-item-${currentVideoIndex}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
 }
 
-function escapeHtml(unsafe) {
-    return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+function generateAiSuggestions() {
+  let totalWatched = 0;
+  let highestCourse = null;
+  let highestWatched = -1;
+  let lowestCourse = null;
+  let lowestWatched = 9999;
+  
+  Object.keys(globalPlatformData).forEach(courseId => {
+    const watched = watchedVideos[courseId] ? watchedVideos[courseId].size : 0;
+    totalWatched += watched;
+    
+    if (watched > highestWatched) {
+      highestWatched = watched;
+      highestCourse = globalPlatformData[courseId].title;
+    }
+    if (watched < lowestWatched) {
+      lowestWatched = watched;
+      lowestCourse = globalPlatformData[courseId].title;
+    }
+  });
+  
+  let suggestion = "";
+  
+  if (totalWatched === 0) {
+    suggestion = "Welcome! You haven't started your classes yet. A good strategy is to begin with a subject you find easiest to build momentum, then tackle harder subjects.";
+  } else if (highestWatched > 0 && lowestWatched === 0) {
+    suggestion = `You are making great progress in <b>${highestCourse}</b>! However, you haven't started <b>${lowestCourse}</b> yet. Try dedicating 30 minutes tomorrow to your neglected subject to keep your preparation balanced.`;
+  } else if ((highestWatched - lowestWatched) > 10) {
+    suggestion = `Your study distribution is slightly unbalanced. You have spent significantly more time on <b>${highestCourse}</b> compared to <b>${lowestCourse}</b>. Consider interleaving your subjects to improve long-term retention.`;
+  } else {
+    suggestion = "Your study routine is perfectly balanced! You are pacing evenly across all subjects. Keep up this consistency, it is the key to mastering the syllabus.";
+  }
+  
+  document.getElementById('aiSuggestionText').innerHTML = suggestion;
 }
