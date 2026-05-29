@@ -540,6 +540,10 @@ body::before {
   cursor: pointer;
   font-size: 0.9rem;
 }
+.paper-select option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
 
 /* ── STUDY HUB (Pomodoro & Activity) ── */
 .study-hub-grid {
