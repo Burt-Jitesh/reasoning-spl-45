@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      document.body.innerHTML += '<h1 style="color:red">ERROR: ' + msg + '</h1><p>Line: ' + lineNo + '</p>';
+      return false;
+    };
+  </script>
+  <script src="data_index.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <h2>Debugging app.js</h2>
+</body>
+</html>
