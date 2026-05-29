@@ -3,62 +3,406 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ONAFBU</title>
+  <title>Govt Exam Mastery | ONAFBU</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Ctext x='50' y='68' font-family='Arial, sans-serif' font-size='56' font-weight='bold' fill='white' text-anchor='middle'%3EO%3C/text%3E%3C/svg%3E">
   
+  <!-- Supabase JS (Local Copy) -->
+  <script src="supabase.js"></script>
+    
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Fonts (Local) -->
+  <!-- HLS.js for Video playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
   
-  <!-- HLS.js -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
-  
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- Icons -->
+
+  <!-- Remix Icons -->
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="dark-mode">
+
+  <!-- ANIMATED BACKGROUND -->
+  <div class="bg-animation-container" id="bgAnimation" style="z-index: -3;">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+  </div>
+  <div id="particles-js" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; pointer-events: none;"></div>
 
   <!-- App Wrapper -->
   <div class="app-wrapper">
     
     <!-- Navbar -->
-    <header class="paper-navbar">
-      <div class="nav-brand" onclick="goHome()">ONAFBU</div>
-      <div class="nav-actions">
-        <!-- Avatar removed -->
-      </div>
-    </header>
-
-    <!-- Global Dashboard -->
-    <main id="dashboardView" class="dashboard-container">
-      <div class="greeting-section">
-        <h1 class="greeting-title" id="greetingTitle">Good Evening.</h1>
-        <p class="greeting-subtitle">Select a subject to continue your journey.</p>
+    <header class="main-navbar" id="navbar">
+      <div class="nav-container">
+        <div class="nav-brand" onclick="goHomeFromLogo()">
+          <span class="animated-logo" style="font-family: 'The Last Shuriken', sans-serif; font-size: 1.8rem; letter-spacing: 2px;">ONAFBU</span>
+        </div>
         
-        <div class="global-capsules clickable-capsules" id="globalCapsules" onclick="openTrackerModal()" title="Click to open Detailed Tracker">
-          <!-- Injected by app.js -->
+        <!-- Desktop Nav Links -->
+        <nav class="nav-links">
+          <a href="#hero" class="nav-link active" onclick="showLandingView()">Home</a>
+          <a href="#study-hub" class="nav-link" onclick="showLandingView()">Study Hub</a>
+          <a href="#features" class="nav-link" onclick="showLandingView()">Features</a>
+          <a href="#courses-section" class="nav-link" onclick="showLandingView()">Courses</a>
+          <a href="#about" class="nav-link" onclick="showLandingView()">About Us</a>
+          <a href="#faq" class="nav-link" onclick="showLandingView()">FAQ</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button class="btn hide-mobile" onclick="document.getElementById('hero').scrollIntoView({behavior:'smooth'})" style="padding: 8px 18px; font-size: 0.95rem; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); border-radius: 8px; margin-right: 10px;">Sign in</button>
+          <button class="btn hide-mobile" onclick="document.getElementById('hero').scrollIntoView({behavior:'smooth'})" style="padding: 8px 18px; font-size: 0.95rem; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-pink) 100%); color: white; border: none; border-radius: 8px; margin-right: 15px;">Sign up</button>
+          <!-- Mobile Menu Toggle -->
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="ri-menu-3-line"></i></button>
         </div>
       </div>
       
-      <div class="course-grid" id="courseGrid">
-        <!-- Injected by app.js -->
+      <!-- Mobile Dropdown -->
+      <div class="mobile-menu" id="mobileMenu">
+        <a href="#hero" onclick="toggleMobileMenu(); showLandingView()">Home</a>
+        <a href="#study-hub" onclick="toggleMobileMenu(); showLandingView()">Study Hub</a>
+        <a href="#features" onclick="toggleMobileMenu(); showLandingView()">Features</a>
+        <a href="#courses-section" onclick="toggleMobileMenu(); showLandingView()">Courses</a>
+        <a href="#about" onclick="toggleMobileMenu(); showLandingView()">About Us</a>
+        <a href="#faq" onclick="toggleMobileMenu(); showLandingView()">FAQ</a>
+        <a href="#hero" onclick="toggleMobileMenu(); return false;" style="color: var(--text-muted);"><i class="ri-login-box-line"></i> Sign in</a>
+        <a href="#hero" onclick="toggleMobileMenu(); return false;" style="color: var(--accent-primary);"><i class="ri-user-add-line"></i> Sign up</a>
       </div>
+    </header>
+
+    <!-- LANDING VIEW (Home, Features, Dashboard, About, FAQ) -->
+    <main id="landingView" class="landing-container">
+      
+      <!-- HERO SECTION -->
+      <section id="hero" class="hero-section">
+        
+        <!-- Left Side: Content -->
+        <div class="hero-content">
+          <div class="badge"><span class="badge-text"><span style="font-family: Arial, sans-serif; margin-right: 3px;">#</span>1 Platform for Government Exams</span></div>
+          <div class="hero-slides-wrap" id="heroSlidesWrap">
+            <div class="hero-slide active">
+              <h1 class="hero-title">Master Your Exams with <br class="hero-br"><span class="text-gradient rotating-font">Expert Faculty</span></h1>
+              <p class="hero-subtitle">Unlimited access to premium video lectures, structured study materials, and mock test PDFs all in one unified platform.</p>
+            </div>
+            <div class="hero-slide">
+              <h1 class="hero-title">Master Your Exams with <br class="hero-br"><span class="text-gradient rotating-font">Premium Materials</span></h1>
+              <p class="hero-subtitle">Get the best-in-class PDF notes, daily practice problems, and detailed solutions to boost your preparation.</p>
+            </div>
+            <div class="hero-slide">
+              <h1 class="hero-title">Master Your Exams with <br class="hero-br"><span class="text-gradient rotating-font">Structured Curriculum</span></h1>
+              <p class="hero-subtitle">Follow comprehensive, step-by-step learning paths designed specifically to cover every aspect of your syllabus.</p>
+            </div>
+            <div class="hero-slide">
+              <h1 class="hero-title">Master Your Exams with <br class="hero-br"><span class="text-gradient rotating-font">Zero Distractions</span></h1>
+              <p class="hero-subtitle">A clean, ad-free learning environment designed exclusively for serious aspirants who want to focus entirely on their goals.</p>
+            </div>
+          </div>
+          <div class="hero-buttons">
+            <a href="#courses-section" class="btn btn-primary" style="margin-top: 15px;">Start Learning Now <i class="ri-arrow-right-line"></i></a>
+          </div>
+        </div>
+
+        <!-- Right Side: Embedded Auth Card -->
+        <div class="hero-auth-panel" style="background: radial-gradient(circle at top, rgba(20, 25, 45, 1) 0%, rgba(10, 14, 28, 1) 100%); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 35px 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+          <!-- Gradient Logo Icon -->
+          <div style="width: 55px; height: 55px; border-radius: 16px; background: linear-gradient(135deg, #a78bfa, #ec4899); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 10px 30px rgba(236, 72, 153, 0.3);">
+            <i class="ri-graduation-cap-fill" style="font-size: 32px; color: white;"></i>
+          </div>
+    
+          <!-- Title & Subtitle -->
+          <h2 style="font-family: 'The Last Shuriken', sans-serif; font-size: 1.8rem; line-height: 1.1; margin-bottom: 12px; letter-spacing: 1px; color: white; text-transform: uppercase;">ONAFBU <br>people's vault</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;">Join us to stay connected, stay updated, and never lose your study history.<br>Your entire preparation journey, securely vaulted.</p>
+    
+          <!-- Auth / Profile Wrappers -->
+          <div id="authPanelUI" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Google Login Button -->
+            <button class="btn" style="width: 100%; justify-content: center; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); font-weight: 500; font-size: 0.95rem; border-radius: 10px; cursor: pointer;" onclick="handleGoogleLogin()">
+              <i class="ri-google-fill" style="color: #ea4335; margin-right: 8px; font-size: 1.1rem; vertical-align: middle;"></i> Continue with Google
+            </button>
+            
+            <div style="display: flex; align-items: center; justify-content: center; margin: 2px 0;">
+              <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
+              <span style="margin: 0 10px; color: rgba(255,255,255,0.2); font-size: 0.8rem;">or email</span>
+              <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
+            </div>
+
+            <input type="email" id="authEmail" placeholder="you@example.com" style="width: 100%; padding: 12px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; font-size: 0.95rem; outline: none; margin-bottom: 2px;" />
+            <input type="password" id="authPassword" placeholder="********" style="width: 100%; padding: 12px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; font-size: 0.95rem; outline: none;" />
+            
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+              <!-- Outline Sign Up Button -->
+              <button class="btn" style="flex: 1; justify-content: center; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-weight: 500; font-size: 0.95rem; border-radius: 10px; cursor: pointer;" onclick="handleEmailSignUp()" id="authSignUpBtn">Sign Up</button>
+              
+              <!-- Gradient Sign In Button -->
+              <button class="btn" style="flex: 1; justify-content: center; padding: 12px; background: linear-gradient(90deg, #3b82f6, #eab308); border: none; color: white; font-weight: 600; font-size: 0.95rem; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-radius: 10px; cursor: pointer;" onclick="handleEmailSignIn()" id="authSignInBtn">Sign In &rarr;</button>
+            </div>
+            
+            <div id="authErrorMsg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+            <div id="authSuccessMsg" style="color: #10b981; font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+          </div>
+
+          <!-- Logged In State UI -->
+          <div id="userProfileUI" style="display: none; flex-direction: column; gap: 15px;">
+             <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                <i class="ri-user-smile-line" style="font-size: 3rem; color: #eab308;"></i>
+                <h3 style="color: white; margin-top: 10px; margin-bottom: 5px; font-family: 'The Last Shuriken', sans-serif;" id="userEmailDisplay">Welcome!</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">You are securely logged into your vault.</p>
+             </div>
+             <button class="btn" style="width: 100%; justify-content: center; padding: 12px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight: 500; border-radius: 10px; cursor: pointer;" onclick="handleSignOut()">Sign Out</button>
+          </div>
+    
+          <!-- Footer Text -->
+          <p style="margin-top: 20px; font-size: 0.75rem; color: rgba(255,255,255,0.2);">crafted by Shikshiten</p>
+        </div>
+      </section>
+
+      <!-- STUDY HUB (Pomodoro & Activity Grid) -->
+      <section id="study-hub" class="study-hub-section">
+        <div class="section-header">
+          <h2 class="section-title">Study Hub</h2>
+          <p class="section-subtitle">Manage your focus and track your progress.</p>
+        </div>
+        <div class="study-hub-grid">
+          
+          <!-- Pomodoro Timer -->
+          <div class="pomodoro-widget paper-panel">
+            <h3><i class="ri-timer-flash-line"></i> Focus Timer</h3>
+            <div class="timer-display" id="pomodoroDisplay">25:00</div>
+            <div class="timer-status" id="pomodoroStatus">Work Session</div>
+            <div class="timer-controls">
+              <button class="paper-btn icon-btn" id="pomodoroStartBtn" onclick="togglePomodoro()"><i class="ri-play-fill"></i></button>
+              <button class="paper-btn icon-btn" onclick="resetPomodoro()"><i class="ri-refresh-line"></i></button>
+              <button class="paper-btn icon-btn" onclick="switchPomodoroMode()"><i class="ri-skip-forward-fill"></i></button>
+            </div>
+          </div>
+
+          <!-- Intensity Grid & Log -->
+          <div class="tracker-widget paper-panel">
+            <div class="tracker-header">
+              <h3><i class="ri-calendar-check-line"></i> Study Activity</h3>
+              <div class="intensity-legend">
+                <span>Less</span>
+                <div class="level level-0"></div>
+                <div class="level level-1"></div>
+                <div class="level level-2"></div>
+                <div class="level level-3"></div>
+                <div class="level level-4"></div>
+                <span>More</span>
+              </div>
+            </div>
+            
+            <div class="tracker-body">
+              <div class="intensity-grid-container">
+                <div class="intensity-grid" id="intensityGrid">
+                  <!-- JS injected squares -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- FEATURES SECTION -->
+      <section id="features" class="features-section">
+        <div class="section-header">
+          <h2 class="section-title">Why Choose ONAFBU?</h2>
+          <p class="section-subtitle">Designed to help you crack the toughest exams.</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card glow-card">
+            <div class="feature-icon" style="background: rgba(139,92,246,0.1); color: #8b5cf6;"><i class="ri-vip-crown-fill"></i></div>
+            <h3>Top Faculty</h3>
+            <p>Learn from the best educators in India, including Gagan Pratap Sir, Piyush Sir, and Gopal Verma Sir.</p>
+          </div>
+          <div class="feature-card glow-card">
+            <div class="feature-icon" style="background: rgba(16,185,129,0.1); color: #10b981;"><i class="ri-file-download-fill"></i></div>
+            <h3>Downloadable Notes</h3>
+            <p>Get immediate access to hundreds of high-quality PDFs and class notes for every single lecture.</p>
+          </div>
+          <div class="feature-card glow-card">
+            <div class="feature-icon" style="background: rgba(236,72,153,0.1); color: #ec4899;"><i class="ri-bar-chart-box-fill"></i></div>
+            <h3>Smart Progress Tracking</h3>
+            <p>We automatically track every video you watch. Visualise your study hours and stay motivated with AI insights.</p>
+          </div>
+          <div class="feature-card glow-card">
+            <div class="feature-icon" style="background: rgba(59,130,246,0.1); color: #3b82f6;"><i class="ri-smartphone-line"></i></div>
+            <h3>Lightning Fast Platform</h3>
+            <p>Built with dynamic lazy-loading architecture ensuring a buttery smooth, app-like experience even on mobile.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- COURSES SECTION (Featured) -->
+      <section id="courses-section" class="courses-section">
+        <div class="section-header">
+          <h2 class="section-title">Featured Courses</h2>
+          <p class="section-subtitle">Start your journey with our top-rated programs.</p>
+        </div>
+        
+        <div class="course-grid" id="featuredCourseGrid">
+          <!-- Featured Courses injected by app.js -->
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px;">
+          <button class="btn btn-primary" onclick="showAllCoursesView()" style="padding: 15px 40px; font-size: 1.1rem;">
+            Browse All Courses <i class="ri-arrow-right-line"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- ABOUT US SECTION -->
+      <section id="about" class="about-section">
+        <div class="about-container paper-panel">
+          <div class="about-content">
+              <h2 class="section-title" style="text-align: left;">Our Mission</h2>
+              <p>We provide a large amount of courses in a single place, and our goal is to provide you with free, high-quality education and much more like this.</p>
+              <p>Every great journey begins with a single step, and we are here to walk with you every inch of the way. Your dedication as a learner fuels our passion to build the best platform possible. Together, we can turn your hardest goals into your greatest achievements. Keep pushing, keep learning, and never give up—because your future is built on what you do today.</p>
+              <div class="mission-stats">
+                <div class="stat-item">
+                  <h3 id="statCourses">4+</h3>
+                  <p>Premium Courses</p>
+                </div>
+                <div class="stat-item">
+                  <h3 id="statLectures">1,400+</h3>
+                  <p>Video Lectures</p>
+                </div>
+                <div class="stat-item">
+                  <h3 id="statPdfs">700+</h3>
+                  <p>Study Materials</p>
+                </div>
+              </div>
+            </div>
+            <div class="about-image">
+              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80" alt="Focused student working on laptop" style="border-radius: 12px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            </div></div>
+      </section>
+
+      <!-- FAQ SECTION -->
+      <section id="faq" class="faq-section">
+        <div class="section-header">
+          <h2 class="section-title">Frequently Asked Questions</h2>
+        </div>
+        <div class="faq-container">
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>How do I access the PDF materials?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Once you open a specific course, click the "Materials" button at the top right. A panel will open showing all available PDFs for that course, which you can view or download instantly.</p>
+            </div>
+          </div>
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>Does my progress save automatically?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! Every time you open a video lecture, it is automatically marked as watched. Your progress is saved locally to your device, so you can track your total study hours and completion percentages on the dashboard.</p>
+            </div>
+          </div>
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>What happens when a YouTube video is not loaded?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Sometimes videos take a moment to buffer. Please wait a bit, and a "Watch on YouTube" link will automatically be shown if the embed fails to load.</p>
+            </div>
+          </div>
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>How do I watch the videos?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Simply click on any class card in the timeline. Please wait a bit for the video player to load. Once it opens, you can play, pause, and mark the class as completed.</p>
+            </div>
+          </div>
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>Where are all the courses available and how do I find them?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>You can find all available courses by clicking the "Courses" link in the top navigation bar, or by clicking the "Browse All Courses" button on the homepage to open the full course library.</p>
+            </div>
+          </div>
+          <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <h4>When will new courses be updated?</h4>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <div class="faq-answer">
+              <p>There is no fixed schedule for new course updates. The platform administrator will add them automatically whenever the owner decides to release new content.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer class="main-footer">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <h2 style="font-family: 'The Last Shuriken', sans-serif; font-size: 2.5rem; margin: 0;">ONAFBU</h2>
+            <p style="margin-top: 15px;">Empowering students for a brighter future.</p>
+          </div>
+          <div class="footer-links">
+            <p>&copy; 2026 ONAFBU Educational Platform. All rights reserved.</p>
+            <p style="margin-top: 10px; font-weight: 500;">Made with <i class="ri-heart-fill" style="color: #ec4899; vertical-align: middle;"></i> by Shikshiten</p>
+            <p style="margin-top: 8px;">
+              <a href="https://t.me/Bookwormislie" target="_blank" style="color: var(--text-muted); text-decoration: none; transition: color 0.3s;">
+                <i class="ri-telegram-fill" style="color: #229ED9; margin-right: 5px; font-size: 1.2rem; vertical-align: middle;"></i> Contact Shikshiten on Telegram
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
     </main>
 
-    <!-- Course View (Timeline) -->
+    <!-- ALL COURSES VIEW -->
+    <main id="allCoursesView" class="landing-container hidden">
+      <section class="courses-section" style="padding-top: 40px;">
+        <div class="section-header">
+          <h2 class="section-title">Explore All Courses</h2>
+          <p class="section-subtitle">Find the perfect batch or subject to accelerate your preparation.</p>
+        </div>
+        
+        <!-- Advanced Search & Filter Bar -->
+        <div class="dashboard-controls paper-panel" style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="search-wrapper" style="width: 100%;">
+            <i class="ri-search-line"></i>
+            <input type="text" id="allCourseSearchInput" placeholder="Search across 50+ courses..." oninput="filterAllCourses()">
+          </div>
+          
+          <div class="category-filters" id="categoryFilters" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+            <button class="filter-chip active" onclick="setCategoryFilter('All', this)">All Courses</button>
+            <button class="filter-chip" onclick="setCategoryFilter('Individual Subjects', this)">Individual Subjects</button>
+            <button class="filter-chip" onclick="setCategoryFilter('Class 9-12', this)">Class 9-12</button>
+            <button class="filter-chip" onclick="setCategoryFilter('NDA / Defence', this)">NDA / Defence</button>
+            <button class="filter-chip" onclick="setCategoryFilter('Mock Tests', this)">Mock Tests</button>
+          </div>
+        </div>
+
+        <div class="course-grid" id="allCourseGrid">
+          <!-- All Courses injected by app.js -->
+        </div>
+      </section>
+    </main>
+
+    <!-- COURSE VIDEO VIEW (Timeline) -->
     <main id="courseView" class="hidden course-container">
-      <div class="course-header paper-panel">
-        <button class="paper-btn icon-btn" onclick="goHome()"><i class="ri-arrow-left-line"></i></button>
-        <div class="course-header-info" style="flex:1;">
+      <div class="course-header paper-panel sticky-header">
+        <button class="paper-btn icon-btn" onclick="goHomeFromLogo()"><i class="ri-arrow-left-line"></i> Back</button>
+        <div class="course-header-info" style="flex:1; margin-left: 15px;">
           <h2 id="courseTitle">Course Name</h2>
-          <p id="courseStats"><span id="completedCount">0</span> Classes Completed</p>
         </div>
         <button class="paper-btn icon-btn" onclick="showCoursePdfs()"><i class="ri-book-3-line"></i> <span class="hide-mobile">Materials</span></button>
       </div>
@@ -86,7 +430,7 @@
     <div class="player-header">
       <button class="paper-btn icon-btn" onclick="closePlayer()"><i class="ri-arrow-left-s-line"></i> Back</button>
       <h3 id="nowPlayingTitle" class="truncate">Class Title</h3>
-      <div></div> <!-- Spacer -->
+      <div></div>
     </div>
     
     <div class="video-container">
@@ -120,9 +464,9 @@
     </div>
     
     <div class="player-controls paper-panel">
-      <button class="paper-btn" id="prevBtn"><i class="ri-skip-back-line"></i></button>
+      <button class="paper-btn" id="prevBtn"><i class="ri-skip-back-line"></i> Prev</button>
       <button class="paper-btn mark-watched-btn" id="markWatchedBtn"><i class="ri-check-line"></i> Mark Done</button>
-      <button class="paper-btn" id="nextBtn"><i class="ri-skip-forward-line"></i></button>
+      <button class="paper-btn" id="nextBtn">Next <i class="ri-skip-forward-line"></i></button>
     </div>
   </div>
 
@@ -130,47 +474,17 @@
   <div id="pdfModal" class="hidden overlay-modal">
     <div class="modal-content paper-panel">
       <div class="modal-header">
-        <h2>Study Materials</h2>
+        <h2><i class="ri-file-text-fill" style="color:var(--accent-primary);"></i> Study Materials</h2>
         <button class="paper-btn icon-btn" onclick="closePdfs()"><i class="ri-close-line"></i></button>
       </div>
       <div class="modal-body" id="pdfContainer">
-        <!-- Categorized PDFs injected here (Accordions) -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Detailed Tracker Modal -->
-  <div id="trackerModal" class="hidden overlay-modal">
-    <div class="modal-content paper-panel tracker-modal-content">
-      <div class="modal-header">
-        <h2><i class="ri-bar-chart-2-line" style="color: var(--accent-primary);"></i> Detailed Analytics</h2>
-        <button class="paper-btn icon-btn" onclick="closeTrackerModal()"><i class="ri-close-line"></i></button>
-      </div>
-      <div class="modal-body">
-        
-        <div class="tracker-dashboard">
-          <!-- Graph Section -->
-          <div class="chart-container paper-panel">
-            <canvas id="studyChart"></canvas>
-          </div>
-          
-          <!-- AI Insight Section -->
-          <div class="ai-insight-box paper-panel">
-            <div class="ai-insight-header">
-              <i class="ri-robot-2-fill"></i> AI Study Suggestion
-            </div>
-            <div class="ai-insight-text" id="aiSuggestionText">
-              Loading insights...
-            </div>
-          </div>
-        </div>
-
+        <!-- Categorized PDFs injected here -->
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
-  <script src="data.js"></script>
+  <script src="data_index.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
